@@ -16,6 +16,9 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -33,8 +36,8 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mTextView = (TextView) findViewById(R.id.tv_download);
-//        mTextView.setMovementMethod(new ScrollingMovementMethod());
-        mImageView = (ImageView) findViewById(R.id.iv_download);
+        mTextView.setMovementMethod(new ScrollingMovementMethod());
+//        mImageView = (ImageView) findViewById(R.id.iv_download);
 
     }
 
@@ -80,12 +83,13 @@ public class MainActivity extends ActionBarActivity {
      * AsyncTask to fetch the data in the background away from the UI thread
      */
 
-    private class DownloadWebpageTask extends AsyncTask<String, Void, Bitmap> {
+    private class DownloadWebpageTask extends AsyncTask<String, Void, String> {
 
         private HttpURLConnection mConnection;
 
         @Override
-        protected Bitmap doInBackground(String... urls) {
+        protected String doInBackground(String... urls) {
+            // ****** EXERCISE 2.a) ******
 //            try {
 //
 //                URL url = new URL(urls[0]);
@@ -106,23 +110,60 @@ public class MainActivity extends ActionBarActivity {
 //            } catch (IOException e) {
 //                return "Error: " + e.getMessage();
 //            }
-            Bitmap image = null;
+
+            // ****** EXERCISE 2.b) ******
+//            Bitmap image = null;
+//            try {
+//
+//                URL imageUrl = new URL(urls[0]);
+//                Log.d("URL CREATED", "");
+//                image = BitmapFactory.decodeStream(imageUrl.openStream());
+//                if (image != null) {
+//                    Log.i("DL", "Successfully retrieved file!");
+//                    return image;
+//                } else {
+//                    Log.i("DL", "Failed decoding file from stream");
+//                }
+//            } catch (Exception e) {
+//                Log.i("DL", "Failed downloading file!");
+//                e.printStackTrace();
+//            }
+//            return image;
+
+            // ****** EXERCISE 3.a) ******
             try {
 
-                URL imageUrl = new URL(urls[0]);
-                Log.d("URL CREATED", "");
-                image = BitmapFactory.decodeStream(imageUrl.openStream());
-                if (image != null) {
-                    Log.i("DL", "Successfully retrieved file!");
-                    return image;
-                } else {
-                    Log.i("DL", "Failed decoding file from stream");
+                URL url = new URL("http://api.openweathermap.org/data/2.5/weather?q=Lisbon,pt");
+                mConnection = (HttpURLConnection) url.openConnection();
+                mConnection.setReadTimeout(10000 /* milliseconds */);
+                mConnection.setConnectTimeout(15000 /* milliseconds */);
+                mConnection.setRequestMethod("GET");
+                mConnection.setDoInput(true);
+
+                mConnection.connect();
+                int statusCode = mConnection.getResponseCode();
+                if (statusCode != HttpURLConnection.HTTP_OK) {
+                    return "Error: Failed getting update notes";
                 }
-            } catch (Exception e) {
-                Log.i("DL", "Failed downloading file!");
-                e.printStackTrace();
+
+                return readTextFromServer(mConnection);
+
+            } catch (IOException e) {
+                return "Error: " + e.getMessage();
             }
-            return image;
+        }
+
+        private String jsonParseWindSpeed(String jsonText) {
+            try {
+                JSONObject jsonWhether = new JSONObject(jsonText);
+                JSONObject jsonWind = jsonWhether.getJSONObject("wind");
+                String speed = jsonWind.getString("speed");
+                String deg = jsonWind.getString("deg");
+                return new String("Wind Info\n\tSpeed: " + speed + "\n\tDegrees: "+ deg);
+            } catch (JSONException e) {
+                return "Failed to get wind info.";
+            }
+
         }
 
         private String readTextFromServer(HttpURLConnection connection) throws IOException {
@@ -145,9 +186,10 @@ public class MainActivity extends ActionBarActivity {
         }
 
         @Override
-        protected void onPostExecute(Bitmap image) {
-//            mTextView.setText("PAGE:" + result);
-            mImageView.setImageBitmap(image);
+        protected void onPostExecute(String result) {
+            mTextView.setText(jsonParseWindSpeed(result));
+//            mTextView.setText("JSON Content:" + result);
+//            mImageView.setImageBitmap(image);
         }
     }
 }
